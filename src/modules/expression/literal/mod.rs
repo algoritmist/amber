@@ -9,6 +9,8 @@ pub mod text;
 pub mod null;
 pub mod array;
 pub mod status;
+pub mod dictionary;
+pub mod sf;
 
 fn is_escaped(word: &str, symbol: char) -> bool {
     let mut backslash_count = 0;

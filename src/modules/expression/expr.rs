@@ -3,7 +3,7 @@ use crate::docs::module::DocumentationModule;
 use crate::modules::builtin::len::Len;
 use crate::modules::command::cmd::Command;
 use crate::modules::expression::binop::BinOp;
-use crate::modules::types::{Typed, Type};
+use crate::modules::types::{Type, Typed};
 use crate::translate::module::TranslateModule;
 use crate::utils::{ParserMetadata, TranslateMetadata};
 use crate::modules::expression::typeop::TypeOp;
@@ -11,32 +11,32 @@ use crate::modules::expression::ternop::TernOp;
 use crate::modules::expression::unop::UnOp;
 use crate::modules::types::parse_type;
 use super::literal::{
-    bool::Bool,
-    number::Number,
-    text::Text,
     array::Array,
+    bool::Bool,
     null::Null,
+    number::Number,
     status::Status,
+    text::Text,
 };
 use super::binop::{
     add::Add,
-    sub::Sub,
-    mul::Mul,
-    div::Div,
-    modulo::Modulo,
-    range::Range,
     and::And,
-    or::Or,
-    gt::Gt,
-    ge::Ge,
-    lt::Lt,
-    le::Le,
+    div::Div,
     eq::Eq,
+    ge::Ge,
+    gt::Gt,
+    le::Le,
+    lt::Lt,
+    modulo::Modulo,
+    mul::Mul,
     neq::Neq,
+    or::Or,
+    range::Range,
+    sub::Sub
 };
 use super::unop::{
-    not::Not,
     neg::Neg,
+    not::Not,
 };
 use super::typeop::{
     cast::Cast,
@@ -49,6 +49,7 @@ use crate::modules::function::invocation::FunctionInvocation;
 use crate::modules::builtin::lines::LinesInvocation;
 use crate::modules::builtin::nameof::Nameof;
 use crate::{document_expression, parse_expr, parse_expr_group, translate_expression};
+use crate::modules::expression::literal::dictionary::Dictionary;
 
 #[derive(Debug, Clone)]
 pub enum ExprType {
@@ -84,6 +85,7 @@ pub enum ExprType {
     Nameof(Nameof),
     Len(Len),
     Is(Is),
+    Dictionary(Dictionary)
 }
 
 #[derive(Debug, Clone, Default)]
@@ -131,6 +133,13 @@ impl Expr {
             _ => None
         }
     }
+
+    pub fn get_var_name(&self) -> Option<String> {
+        match &self.value {
+            Some(ExprType::VariableGet(var)) => Some(var.name.clone()),
+            _ => None
+        }
+    }
 }
 
 impl SyntaxModule<ParserMetadata> for Expr {
@@ -150,13 +159,14 @@ impl SyntaxModule<ParserMetadata> for Expr {
             range @ BinOp => [ Range ],
             or @ BinOp => [ Or ],
             and @ BinOp => [ And ],
-            equality @ BinOp => [ Eq, Neq ],
+            equality @ BinOp => [ Eq, Neq],
             relation @ BinOp => [ Gt, Ge, Lt, Le ],
             addition @ BinOp => [ Add, Sub ],
             multiplication @ BinOp => [ Mul, Div, Modulo ],
             types @ TypeOp => [ Is, Cast ],
             unops @ UnOp => [ Neg, Not, Len ],
             literals @ Literal => [
+                Dictionary,
                 // Literals
                 Parentheses, Bool, Number, Text,
                 Array, Null, Status, Nameof,
@@ -165,6 +175,7 @@ impl SyntaxModule<ParserMetadata> for Expr {
                 // Function invocation
                 FunctionInvocation, Command,
                 // Variable access
+                // TODO: find the right order for the statements
                 VariableGet
             ]
         ]);
@@ -176,10 +187,11 @@ impl SyntaxModule<ParserMetadata> for Expr {
 impl TranslateModule for Expr {
     fn translate(&self, meta: &mut TranslateMetadata) -> String {
         translate_expression!(meta, self.value.as_ref().unwrap(), [
+            Dictionary,
             // Ternary conditional
             Ternary,
             // Logical operators
-            And, Or,
+            And, Or, //SetField,
             // Comparison operators
             Gt, Ge, Lt, Le, Eq, Neq,
             // Arithmetic operators
@@ -209,7 +221,7 @@ impl DocumentationModule for Expr {
             // Logical operators
             And, Or,
             // Comparison operators
-            Gt, Ge, Lt, Le, Eq, Neq,
+            Gt, Ge, Lt, Le, Eq, Neq, //SetField,
             // Arithmetic operators
             Add, Sub, Mul, Div, Modulo,
             // Binary operators
@@ -224,7 +236,8 @@ impl DocumentationModule for Expr {
             // Function invocation
             FunctionInvocation, Command,
             // Variable access
-            VariableGet
+            VariableGet,
+            Dictionary
         ])
     }
 }

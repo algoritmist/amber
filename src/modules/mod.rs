@@ -11,7 +11,6 @@ pub mod types;
 pub mod imports;
 pub mod main;
 pub mod builtin;
-
 #[macro_export]
 macro_rules! handle_types {
     ($enum_name:ident, [$($item:tt),*]) => {
