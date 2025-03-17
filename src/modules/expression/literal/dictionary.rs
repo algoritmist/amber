@@ -36,8 +36,16 @@ impl SyntaxModule<ParserMetadata> for Dictionary {
                 token(meta, ":")?;
                 let mut expr = Expr::new();
                 syntax(meta, &mut expr)?;
-                token(meta, ",")?;
-                self.dict.insert(key, expr);
+                let tok = meta.get_current_token();
+                if token(meta, ",").is_ok(){
+                    self.dict.insert(key, expr);
+                    continue;
+                }
+                if token(meta, "|").is_ok(){
+                    self.dict.insert(key, expr);
+                    return Ok(());
+                }
+                return error!(meta, tok, "Expected , or |");
             }
             token(meta, "|")?;
             Ok(())
