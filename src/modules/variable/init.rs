@@ -1,7 +1,7 @@
 use heraclitus_compiler::prelude::*;
 use crate::docs::module::DocumentationModule;
 use crate::modules::types::{Typed, Type};
-use crate::modules::expression::expr::Expr;
+use crate::modules::expression::expr::{Expr, ExprType};
 use crate::translate::module::TranslateModule;
 use crate::utils::metadata::{ParserMetadata, TranslateMetadata};
 use super::{variable_name_extensions, handle_identifier_name};
@@ -66,6 +66,11 @@ impl TranslateModule for VariableInit {
         if let Type::Array(_) = self.expr.get_type() {
             expr = format!("({expr})");
         }
+
+        if let Some(ExprType::Dictionary(dict)) = &self.expr.value{
+            meta.var_to_dict.insert(self.global_id.unwrap(), dict.clone());
+        }
+
         if let Some(id) = self.global_id {
             format!("__{id}_{name}={expr}")
         } else if self.is_fun_ctx {

@@ -10,7 +10,7 @@ use heraclitus_compiler::prelude::*;
 pub struct VariableGet {
     pub name: String,
     kind: Type,
-    global_id: Option<usize>,
+    pub global_id: Option<usize>,
     index: Box<Option<Expr>>,
     is_ref: bool
 }
@@ -93,6 +93,13 @@ impl TranslateModule for VariableGet {
                     format!("{quote}${{{name}[@]}}{quote}")
                 }
             }
+            Type::Dict => {
+                let id = self.global_id.unwrap();
+                println!("{id}");
+                let dict = meta.var_to_dict.get(&self.global_id.unwrap()).unwrap();
+                let name = dict.get_name();
+                format!("{quote}${{{name}[@]}}{quote}")
+            }
             Type::Text => {
                 let prefix = if self.is_ref { "!" } else { "" };
                 format!("{quote}${{{prefix}{name}}}{quote}")
@@ -111,6 +118,10 @@ impl VariableGet {
             Some(id) => format!("__{id}_{}", self.name),
             None => self.name.to_string()
         }
+    }
+
+    pub fn get_global_id(&self) -> Option<usize> {
+        self.global_id
     }
 
     fn slice_ref_array(meta: &mut TranslateMetadata, name: &str, index: &Expr) -> String {

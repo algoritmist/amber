@@ -1,6 +1,7 @@
-use std::collections::VecDeque;
+use std::collections::{HashMap, VecDeque};
 
 use crate::compiler::CompilerOptions;
+use crate::modules::expression::literal::dictionary::Dictionary;
 use crate::translate::compute::ArithType;
 use crate::utils::function_cache::FunctionCache;
 use crate::utils::function_metadata::FunctionMetadata;
@@ -27,7 +28,9 @@ pub struct TranslateMetadata {
     /// The current indentation level.
     pub indent: i64,
     /// Determines if minify flag was set.
-    pub minify: bool
+    pub minify: bool,
+    /// Stores dictionaries associated with variables
+    pub var_to_dict: HashMap<usize, Dictionary>
 }
 
 impl TranslateMetadata {
@@ -42,6 +45,7 @@ impl TranslateMetadata {
             silenced: false,
             indent: -1,
             minify: options.minify,
+            var_to_dict: HashMap::new(),
         }
     }
 

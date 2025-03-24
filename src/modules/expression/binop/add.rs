@@ -1,19 +1,21 @@
 use heraclitus_compiler::prelude::*;
 use crate::docs::module::DocumentationModule;
 use crate::{handle_binop, error_type_match};
-use crate::modules::expression::expr::Expr;
+use crate::modules::expression::expr::{Expr, ExprType};
+use crate::modules::expression::literal::dictionary::{Dictionary};
 use crate::translate::compute::{translate_computation, ArithOp};
 use crate::utils::{ParserMetadata, TranslateMetadata};
 use crate::translate::module::TranslateModule;
 use crate::modules::types::{Typed, Type};
-
+use crate::modules::types::Type::Dict;
 use super::BinOp;
 
 #[derive(Debug, Clone)]
 pub struct Add {
     left: Box<Expr>,
     right: Box<Expr>,
-    kind: Type
+    kind: Type,
+    id: Option<usize>
 }
 
 impl Typed for Add {
@@ -44,7 +46,8 @@ impl SyntaxModule<ParserMetadata> for Add {
         Add {
             left: Box::new(Expr::new()),
             right: Box::new(Expr::new()),
-            kind: Type::default()
+            kind: Type::default(),
+            id: None,
         }
     }
 
@@ -52,8 +55,10 @@ impl SyntaxModule<ParserMetadata> for Add {
         self.kind = handle_binop!(meta, "add", self.left, self.right, [
             Num,
             Text,
-            Array
+            Array,
+            Dict
         ])?;
+        self.id = Some(meta.gen_var_id());
         Ok(())
     }
 }
@@ -70,6 +75,45 @@ impl TranslateModule for Add {
                 let name = format!("__AMBER_ARRAY_ADD_{id}");
                 meta.stmt_queue.push_back(format!("{name}=({left} {right})"));
                 format!("{quote}{dollar}{{{name}[@]}}{quote}")
+            },
+            Type::Dict => {
+                let left = Dictionary::dict_from_expr(*self.left.clone(), meta);
+                let right = Dictionary::dict_from_expr(*self.right.clone(), meta);
+                if let (Some(left_dict), Some(right_dict)) = (left, right) {
+                    println!("Successful decomposition");
+                    let mut dict = Dictionary::new();
+                    for (left_key, left_value) in left_dict.get_dict() {
+                        let operation = if let Some(right_value) = right_dict.get_dict().get(&left_key) {
+                            let op = ExprType::Add(
+                                Add
+                                {
+                                    kind: left_value.kind.clone(),
+                                    left: Box::new(left_value),
+                                    right: Box::new(right_value.clone()),
+                                    id: None
+                                }
+                            );
+                            let mut expr = Expr::new();
+                            expr.value = Some(op);
+                            expr.kind = Dict;
+                            expr
+                        } else {
+                            left_value
+                        };
+                        dict.insert(left_key.clone(), operation);
+                    }
+                    for (right_key, right_value) in right_dict.get_dict() {
+                        if let Some(_) = left_dict.get_dict().get(&right_key) {
+                            continue;
+                        }
+                        dict.insert(right_key.clone(), right_value);
+                    }
+                    dict.set_id(self.id.unwrap());
+                    return dict.translate(meta);
+                } else {
+                    println!("UnSuccessful decomposition");
+                }
+                String::new()
             },
             Type::Text => format!("{}{}", left, right),
             _ => translate_computation(meta, ArithOp::Add, Some(left), Some(right))

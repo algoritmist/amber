@@ -11,7 +11,8 @@ pub enum Type {
     Num,
     Array(Box<Type>),
     Failable(Box<Type>),
-    Generic
+    Generic,
+    Dict,
 }
 
 impl Type {
@@ -48,6 +49,7 @@ impl Display for Type {
             Type::Bool => write!(f, "Bool"),
             Type::Num => write!(f, "Num"),
             Type::Null => write!(f, "Null"),
+            Type::Dict => write!(f, "Dict"),
             Type::Array(t) => if **t == Type::Generic {
                     write!(f, "[]")
                 } else {
