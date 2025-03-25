@@ -8,7 +8,6 @@ use crate::utils::{ParserMetadata, TranslateMetadata};
 use std::string::String;
 use std::sync::{Arc, Mutex, Once};
 use itertools::Itertools;
-use once_cell::unsync::Lazy;
 use crate::docs::module::DocumentationModule;
 use crate::modules::types::{Type, Typed};
 use crate::modules::variable::variable_name_extensions;
@@ -45,6 +44,13 @@ impl Dictionary {
         match expr.value{
             Some(ExprType::Dictionary(dict)) => Some(dict),
             Some(ExprType::VariableGet(var)) => meta.var_to_dict.get(&var.global_id.unwrap()).cloned(),
+            _ => None
+        }
+    }
+
+    pub fn field_from_expr(expr: Expr, meta: &mut TranslateMetadata) -> Option<String> {
+        match expr.value{
+            Some(ExprType::VariableGet(var)) => var.field_name,
             _ => None
         }
     }

@@ -1,8 +1,9 @@
-use std::collections::BTreeSet;
+use std::collections::{BTreeSet, HashMap};
 
 use heraclitus_compiler::prelude::*;
 use amber_meta::ContextManager;
 use crate::modules::block::Block;
+use crate::modules::expression::literal::dictionary::Dictionary;
 use crate::modules::types::Type;
 use crate::utils::context::{Context, ScopeUnit, VariableDecl, FunctionDecl};
 use crate::utils::function_interface::FunctionInterface;
@@ -30,6 +31,7 @@ pub struct ParserMetadata {
     pub messages: Vec<Message>,
     /// Show standard library usage in documentation
     pub doc_usage: bool,
+    pub var_to_dict: HashMap<usize, Dictionary>,
 }
 
 impl ParserMetadata {
@@ -185,6 +187,7 @@ impl Metadata for ParserMetadata {
             context: Context::new(path, tokens),
             messages: Vec::new(),
             doc_usage: false,
+            var_to_dict: HashMap::new(),
         }
     }
 

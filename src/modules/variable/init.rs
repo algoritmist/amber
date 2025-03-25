@@ -52,6 +52,9 @@ impl SyntaxModule<ParserMetadata> for VariableInit {
             // Add a variable to the memory
             self.handle_add_variable(meta, tok)?;
             self.is_fun_ctx = meta.context.is_fun_ctx;
+            if let Some(ExprType::Dictionary(dict)) = &self.expr.value {
+                meta.var_to_dict.insert(self.global_id.unwrap(), dict.clone());
+            }
             Ok(())
         }, |position| {
             error_pos!(meta, position, format!("Expected '=' after variable name '{}'", self.name))

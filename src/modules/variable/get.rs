@@ -11,6 +11,7 @@ pub struct VariableGet {
     pub name: String,
     kind: Type,
     pub global_id: Option<usize>,
+    pub field_name: Option<String>,
     index: Box<Option<Expr>>,
     is_ref: bool
 }
@@ -46,6 +47,7 @@ impl SyntaxModule<ParserMetadata> for VariableGet {
             name: String::new(),
             kind: Type::Null,
             global_id: None,
+            field_name: None,
             index: Box::new(None),
             is_ref: false
         }
@@ -54,13 +56,20 @@ impl SyntaxModule<ParserMetadata> for VariableGet {
     fn parse(&mut self, meta: &mut ParserMetadata) -> SyntaxResult {
         let tok = meta.get_current_token();
         self.name = variable(meta, variable_name_extensions())?;
-        let variable = handle_variable_reference(meta, &tok, &self.name)?;
-        self.global_id = variable.global_id;
-        self.is_ref = variable.is_ref;
-        self.kind = variable.kind.clone();
+        let var = handle_variable_reference(meta, &tok, &self.name)?;
+        self.global_id = var.global_id;
+        self.is_ref = var.is_ref;
+        if token(meta, ".").is_ok(){
+            let field_name = variable(meta, variable_name_extensions())?;
+            self.field_name = Some(field_name.clone());
+            //self.kind = meta.var_to_dict.get(&self.global_id.unwrap()).unwrap().get_dict()[&field_name].kind.clone();
+        }
+        //else{
+        self.kind = var.kind.clone();
+        //}
         self.index = Box::new(handle_index_accessor(meta, true)?);
         // Check if the variable can be indexed
-        if self.index.is_some() && !matches!(variable.kind, Type::Array(_)) {
+        if self.index.is_some() && !matches!(var.kind, Type::Array(_)) {
             return error!(meta, tok, format!("Cannot index a non-array variable of type '{}'", self.kind));
         }
         Ok(())
@@ -98,7 +107,13 @@ impl TranslateModule for VariableGet {
                 println!("{id}");
                 let dict = meta.var_to_dict.get(&self.global_id.unwrap()).unwrap();
                 let name = dict.get_name();
-                format!("{quote}${{{name}[@]}}{quote}")
+                if let Some(var_name) = &self.field_name{
+                    let dollar = meta.gen_dollar();
+                    format!("{quote}{dollar}{name}_{var_name}{quote}")
+                }
+                else{
+                    format!("{quote}${{{name}[@]}}{quote}")
+                }
             }
             Type::Text => {
                 let prefix = if self.is_ref { "!" } else { "" };
