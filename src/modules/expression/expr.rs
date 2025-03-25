@@ -102,6 +102,7 @@ impl Typed for Expr {
     }
 }
 
+
 impl Expr {
     pub fn get_integer_value(&self) -> Option<isize> {
         match &self.value {
@@ -138,6 +139,25 @@ impl Expr {
         match &self.value {
             Some(ExprType::VariableGet(var)) => Some(var.name.clone()),
             _ => None
+        }
+    }
+
+    pub fn get_type_from_parser_meta(&self, meta: &mut ParserMetadata) -> Type {
+        match &self.value{
+            Some(ExprType::VariableGet(var)) => {
+                if let Some(dict) = meta.var_to_dict.get(&var.global_id.unwrap()){
+                    if let Some(field_name) = &var.field_name{
+                        dict.get_dict()[field_name].get_type()
+                    }
+                    else{
+                        var.get_type()
+                    }
+                }
+                else{
+                    var.get_type()
+                }
+            }
+            _ => self.get_type()
         }
     }
 }

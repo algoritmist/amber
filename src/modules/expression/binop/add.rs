@@ -81,8 +81,8 @@ impl TranslateModule for Add {
                 let right = Dictionary::dict_from_expr(*self.right.clone(), meta);
                 if let (Some(left_dict), Some(right_dict)) = (left, right) {
                     println!("Successful decomposition");
-                    let left_field = Dictionary::field_from_expr(*self.left.clone(), meta);
-                    let right_field = Dictionary::field_from_expr(*self.right.clone(), meta);
+                    let left_field = Dictionary::field_from_expr(*self.left.clone());
+                    let right_field = Dictionary::field_from_expr(*self.right.clone());
                     if let (Some(left_field), Some(right_field)) = (left_field, right_field) {
                         let left_value = &left_dict.get_dict()[&left_field];
                         let right_value = &right_dict.get_dict()[&right_field];

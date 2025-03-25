@@ -48,7 +48,15 @@ impl Dictionary {
         }
     }
 
-    pub fn field_from_expr(expr: Expr, meta: &mut TranslateMetadata) -> Option<String> {
+    pub fn dict_from_parser_expr(expr: Expr, meta: &mut ParserMetadata) -> Option<Dictionary> {
+        match expr.value{
+            Some(ExprType::Dictionary(dict)) => Some(dict),
+            Some(ExprType::VariableGet(var)) => meta.var_to_dict.get(&var.global_id.unwrap()).cloned(),
+            _ => None
+        }
+    }
+
+    pub fn field_from_expr(expr: Expr) -> Option<String> {
         match expr.value{
             Some(ExprType::VariableGet(var)) => var.field_name,
             _ => None

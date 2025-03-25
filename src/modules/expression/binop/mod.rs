@@ -34,9 +34,9 @@ macro_rules! handle_binop {
     };
 
     ($meta:expr, $op_name:expr, $left:expr, $right:expr, [$($type_match:ident),+]) => {{
-        let left_match = matches!($left.get_type(), $(handle_binop!(@internal type: $type_match))|*);
-        let right_match = matches!($right.get_type(), $(handle_binop!(@internal type: $type_match))|*);
-        if !left_match || !right_match || $left.get_type() != $right.get_type() {
+        let left_match = matches!($left.get_type_from_parser_meta($meta), $(handle_binop!(@internal type: $type_match))|*);
+        let right_match = matches!($right.get_type_from_parser_meta($meta), $(handle_binop!(@internal type: $type_match))|*);
+        if !left_match || !right_match || $left.get_type_from_parser_meta($meta) != $right.get_type_from_parser_meta($meta) {
             let pos = $crate::modules::expression::binop::get_binop_position_info($meta, &$left, &$right);
             let message = Message::new_err_at_position($meta, pos);
             error_type_match!($meta, message, $op_name, $left, $right, [$($type_match),+])
