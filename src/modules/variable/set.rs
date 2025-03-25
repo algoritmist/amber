@@ -1,6 +1,7 @@
 use heraclitus_compiler::prelude::*;
 use crate::docs::module::DocumentationModule;
 use crate::{modules::expression::expr::Expr, translate::module::TranslateModule};
+use crate::modules::expression::expr::ExprType;
 use crate::utils::{ParserMetadata, TranslateMetadata};
 use super::{handle_index_accessor, handle_variable_reference, prevent_constant_mutation, variable_name_extensions};
 use crate::modules::types::{Typed, Type};
@@ -11,7 +12,8 @@ pub struct VariableSet {
     expr: Box<Expr>,
     global_id: Option<usize>,
     index: Option<Expr>,
-    is_ref: bool
+    is_ref: bool,
+    field_name: Option<String>
 }
 
 impl VariableSet {
@@ -33,7 +35,8 @@ impl SyntaxModule<ParserMetadata> for VariableSet {
             expr: Box::new(Expr::new()),
             global_id: None,
             index: None,
-            is_ref: false
+            is_ref: false,
+            field_name: None
         }
     }
 
@@ -41,6 +44,10 @@ impl SyntaxModule<ParserMetadata> for VariableSet {
         let tok = meta.get_current_token();
         self.name = variable(meta, variable_name_extensions())?;
         self.index = handle_index_accessor(meta, false)?;
+        if token(meta, ".").is_ok(){
+            let field_name = variable(meta, variable_name_extensions())?;
+            self.field_name = Some(field_name.clone());
+        }
         token(meta, "=")?;
         syntax(meta, &mut *self.expr)?;
         let variable = handle_variable_reference(meta, &tok, &self.name)?;
@@ -66,7 +73,15 @@ impl SyntaxModule<ParserMetadata> for VariableSet {
         }
         // Check if the variable is compatible with the assigned value
         else if variable.kind != self.expr.get_type() {
-            return error!(meta, tok, format!("Cannot assign value of type '{right_type}' to a variable of type '{left_type}'"));
+            if let Some(dict) = meta.var_to_dict.get(&self.global_id.unwrap()){
+                let field_name = self.field_name.clone().unwrap();
+                if dict.get_dict()[&field_name].kind != self.expr.kind{
+                    return error!(meta, tok, format!("Cannot assign value of type '{right_type}' to a variable of type '{left_type}'"));
+                }
+            }
+            else {
+                return error!(meta, tok, format!("Cannot assign value of type '{right_type}' to a variable of type '{left_type}'"));
+            }
         }
         Ok(())
     }
@@ -82,6 +97,14 @@ impl TranslateModule for VariableSet {
         let mut expr = self.translate_eval_if_ref(self.expr.as_ref(), meta);
         if let Type::Array(_) = self.expr.get_type() {
             expr = format!("({expr})");
+        }
+
+        if let Some(dict) = meta.var_to_dict.get(&self.global_id.unwrap()) {
+            let name = dict.get_name();
+            if let Some(var_name) = &self.field_name{
+                let dollar = meta.gen_dollar();
+                return format!("{name}_{var_name}={expr}")
+            }
         }
         if let Some(id) = self.global_id {
             format!("__{id}_{name}{index}={expr}")
